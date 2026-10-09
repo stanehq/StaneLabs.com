@@ -1,0 +1,10 @@
+import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+import path from 'node:path';
+const output = path.resolve('out');
+const destination = path.resolve('dist');
+if (!existsSync(path.join(output, 'index.html'))) throw new Error('Next.js static export is missing.');
+if (destination !== path.join(path.resolve('.'), 'dist') || !destination.startsWith(path.resolve('.') + path.sep)) throw new Error('Unsafe build destination.');
+rmSync(destination, {recursive: true, force: true});
+mkdirSync(destination, {recursive: true});
+cpSync(output, destination, {recursive: true});
+console.log('Next.js export prepared in dist/.');

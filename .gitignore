@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.sites-runtime/
+.DS_Store
+*.log
+*.tsbuildinfo
+.next/
+out/
+backend/dist/
+.env
+.env.*
+!.env.example
+!backend/.env.example

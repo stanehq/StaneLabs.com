@@ -1,0 +1,11 @@
+import * as React from 'react';
+import * as AccordionPrimitive from '@radix-ui/react-accordion';
+import { Icon } from '@/components/Icon';
+import { cn } from '@/lib/utils';
+export const Accordion = AccordionPrimitive.Root;
+export const AccordionItem = React.forwardRef<React.ElementRef<typeof AccordionPrimitive.Item>, React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>>(({ className, ...props }, ref) => <AccordionPrimitive.Item ref={ref} className={cn('border-b border-border', className)} {...props} />);
+AccordionItem.displayName = 'AccordionItem';
+export const AccordionTrigger = React.forwardRef<React.ElementRef<typeof AccordionPrimitive.Trigger>, React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>>(({ className, children, ...props }, ref) => <AccordionPrimitive.Header><AccordionPrimitive.Trigger ref={ref} className={cn('accordion-trigger group flex w-full items-center justify-between gap-4 rounded-md bg-primary px-5 py-4 text-left font-heading text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground', className)} {...props}>{children}<Icon name="plus" className="accordion-plus" /></AccordionPrimitive.Trigger></AccordionPrimitive.Header>);
+AccordionTrigger.displayName = 'AccordionTrigger';
+export const AccordionContent = React.forwardRef<React.ElementRef<typeof AccordionPrimitive.Content>, React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>>(({ className, children, ...props }, ref) => <AccordionPrimitive.Content ref={ref} className="accordion-content overflow-hidden" {...props}><div className={cn('py-6 text-muted font-sans', className)}>{children}</div></AccordionPrimitive.Content>);
+AccordionContent.displayName = 'AccordionContent';

@@ -1,0 +1,14 @@
+node_modules
+backend/node_modules
+.git
+.next
+out
+dist
+backend/dist
+.sites-runtime
+.env
+.env.*
+!backend/.env.example
+!.env.example
+*.log
+*.tsbuildinfo

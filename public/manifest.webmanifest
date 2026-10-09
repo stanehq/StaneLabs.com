@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "StaneLabs",
+  "short_name": "StaneLabs",
+  "description": "Protege lo que importa. StaneLabs diseña estrategias de ciberseguridad, seguridad operacional y protección de información sensible.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#2597D0",
+  "icons": [
+    {
+      "src": "/brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# Example for a Caddy instance running on the VPS host.
+# Point the A/AAAA records to the VPS before enabling this configuration.
+stanelabs.com {
+  encode zstd gzip
+  reverse_proxy 127.0.0.1:3001
+}
