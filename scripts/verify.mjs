@@ -23,7 +23,7 @@ assert.match(robots, /^User-agent: \*$/m);
 assert.match(robots, /^Allow: \/$/m);
 assert(robots.includes(`Sitemap: ${origin}/sitemap.xml`));
 const sitemap = await read('sitemap.xml');
-const requiredRoutes = ['/', '/security', '/privacy', '/legal'];
+const requiredRoutes = ['/', '/security', '/privacy', '/tos', '/purchase'];
 for (const route of requiredRoutes) {
   assert(sitemap.includes(`<loc>${origin}${route}${route === '/' ? '' : '/'}</loc>`), `Sitemap missing ${route}.`);
   const filename = route === '/' ? 'index.html' : `${route.slice(1)}/index.html`;
