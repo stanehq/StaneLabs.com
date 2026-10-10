@@ -1,6 +1,8 @@
 # StaneLabs
 
-Sitio de ciberseguridad, OPSEC y protección de información sensible. La dirección oficial configurada es **https://stanelabs.com** y el canal de seguridad es **security@stanelabs.com**.
+Sitio de ciberseguridad, OPSEC y protección de información sensible. La dirección oficial configurada es **https://www.stanelabs.com** y el canal de seguridad es **security@stanelabs.com**.
+
+La portada utiliza una escultura WebGL azul satinada y un fondo discreto. El contenido se concentra en pestañas de especialidades, metodología, ejemplos de entregables y preguntas. Las animaciones respetan el movimiento reducido y se suspenden cuando no son visibles; no hay un control de pausa manual. Los ejemplos de entregables son ilustrativos y no representan trabajos de clientes.
 
 ## Arquitectura
 
@@ -46,7 +48,7 @@ Compilación completa desde la raíz:
 npm run build
 ```
 
-Compila el frontend con Next, prepara su exportación en `dist/`, genera y verifica los archivos SEO y públicos, y compila Nest en `backend/dist/`. `scripts/verify.mjs` comprueba las cuatro rutas prerenderizadas, sus metadatos, los iconos y el archivo de divulgación. `npm run build:visual` y `npm run preview` corresponden exclusivamente a la compilación y revisión con Vite.
+Compila el frontend con Next, prepara su exportación en `dist/`, genera y verifica los archivos SEO y públicos, y compila Nest en `backend/dist/`. `scripts/verify.mjs` comprueba las cinco rutas prerenderizadas, sus metadatos, los iconos y el archivo de divulgación. `npm run build:visual` y `npm run preview` corresponden exclusivamente a la compilación y revisión con Vite.
 
 ## Contacto y configuración SMTP
 

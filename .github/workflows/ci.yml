@@ -167,13 +167,17 @@ jobs:
           EXPECTED_IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: python3 scripts/ci/prepare-artifacts.py
       - name: Scan the actual runtime image; fail on HIGH or CRITICAL
+        env:
+          EXPECTED_IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
-          trivy image --cache-dir .ci/trivy --input .ci/artifacts/image.oci.tar \
+          trivy image --cache-dir .ci/trivy --input ".ci/image@$EXPECTED_IMAGE_DIGEST" \
             --scanners vuln,misconfig,secret --image-config-scanners misconfig,secret --skip-check-update \
             --severity HIGH,CRITICAL --exit-code 1 --format json --output .ci/artifacts/trivy-image.json
       - name: Generate SBOMs for the runtime image and exported static assets
+        env:
+          EXPECTED_IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
-          trivy image --cache-dir .ci/trivy --input .ci/artifacts/image.oci.tar --format spdx-json --output .ci/artifacts/image.sbom.spdx.json
+          trivy image --cache-dir .ci/trivy --input ".ci/image@$EXPECTED_IMAGE_DIGEST" --format spdx-json --output .ci/artifacts/image.sbom.spdx.json
           trivy fs --cache-dir .ci/trivy --format spdx-json --output .ci/artifacts/web.sbom.spdx.json .ci/site
           trivy fs --cache-dir .ci/trivy --include-dev-deps --skip-dirs node_modules --skip-dirs backend/node_modules \
             --skip-dirs .next --skip-dirs .ci --skip-dirs dist --skip-dirs backend/dist \
