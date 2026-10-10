@@ -1,7 +1,0 @@
-# StaneLabs — responsible vulnerability disclosure
-Contact: mailto:security@stanelabs.com
-Contact: https://stanelabs.com/security
-Expires: 2027-04-09T00:00:00Z
-Preferred-Languages: es, en
-Canonical: https://stanelabs.com/.well-known/security.txt
-Policy: https://stanelabs.com/security
