@@ -1,8 +1,7 @@
 import { readFile, writeFile, mkdir, readdir, access } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { projectRoot as root } from './project-root.mjs';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const config = JSON.parse(await readFile(path.join(root, 'project-config.json'), 'utf8'));
 const productionUrl = new URL(config.siteUrl);
 if (productionUrl.protocol !== 'https:' || productionUrl.username || productionUrl.password || productionUrl.search || productionUrl.hash || !['', '/'].includes(productionUrl.pathname)) {

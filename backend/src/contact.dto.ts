@@ -9,12 +9,14 @@ export class ContactDto {
   @IsString()
   @MinLength(1)
   @MaxLength(100)
+  // eslint-disable-next-line no-control-regex -- Reject NUL and header line breaks in user-supplied names.
   @Matches(/^[^\r\n\x00]+$/)
   name!: string;
 
   @Transform(trim)
   @IsEmail()
   @MaxLength(180)
+  // eslint-disable-next-line no-control-regex -- Reject NUL and header line breaks in user-supplied addresses.
   @Matches(/^[^\r\n\x00]+$/)
   email!: string;
 

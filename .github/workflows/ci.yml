@@ -1,0 +1,367 @@
+name: CI and verified GHCR publication
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: 'true'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  quality:
+    name: Lint, types, tests and npm integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set exact Node version
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Install locked dependencies without lifecycle hooks
+        run: |
+          node scripts/ci/verify-pins.mjs
+          npm ci --ignore-scripts
+      - name: Lint, typecheck and meaningful tests
+        run: |
+          npm run ci:check
+          python3 -m unittest discover -s scripts/ci -p test_artifacts.py -v
+      - name: Audit dependencies and publisher signatures
+        run: |
+          mkdir -p .ci/reports
+          npm audit --audit-level=high --json > .ci/reports/npm-audit.json
+          npm audit signatures | tee .ci/reports/npm-signatures.txt
+          npm audit signatures --json > .ci/reports/npm-signatures.json
+      - name: Retain audit results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: npm-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .ci/reports/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  security:
+    name: SAST, secrets and workflow security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout full history without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set exact Node version for tool installer
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Install checksum-verified security tools
+        run: bash scripts/ci/install-tools.sh actionlint zizmor gitleaks trivy
+      - name: Validate workflow syntax and privilege boundaries
+        run: |
+          mkdir -p .ci/reports
+          actionlint -shellcheck='' -pyflakes=''
+          zizmor --offline --no-progress --format sarif .github/workflows > .ci/reports/zizmor.sarif
+          # SARIF reporting alone does not enforce zizmor's failing exit status.
+          zizmor --offline --no-progress .github/workflows
+      - name: Scan full Git history with redacted results
+        run: gitleaks git . --redact=100 --config .gitleaks.toml --report-format json --report-path .ci/reports/gitleaks.json --log-opts='--all'
+      - name: Run reviewed local Semgrep rules and rule tests
+        run: |
+          scanner=$(node --input-type=module -e "import fs from 'node:fs';console.log(JSON.parse(fs.readFileSync('scripts/ci/images.lock.json')).semgrep)")
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            -e SEMGREP_SEND_METRICS=off -e SEMGREP_ENABLE_VERSION_CHECK=0 \
+            -e HOME=/tmp -e SEMGREP_SETTINGS_FILE=/tmp/semgrep-settings.yml -e XDG_CACHE_HOME=/tmp/.cache \
+            -v "$PWD:/src" -w /src --entrypoint bash "$scanner" scripts/ci/check-sast.sh
+      - name: Scan source lockfiles and container configuration
+        run: |
+          trivy fs --cache-dir .ci/trivy --scanners vuln,misconfig --skip-check-update \
+            --skip-dirs node_modules --skip-dirs backend/node_modules --skip-dirs .next \
+            --skip-dirs .ci --skip-dirs dist --skip-dirs backend/dist \
+            --severity HIGH,CRITICAL --exit-code 1 --format json --output .ci/reports/trivy-source.json .
+      - name: Retain security reports with the repository's visibility
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: security-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .ci/reports/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  image:
+    name: Build once and scan linux/amd64 OCI artifact
+    needs: [quality, security]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - name: Checkout full history without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate release tags belong to main
+        env:
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          if [[ "$REF" == refs/tags/* ]]; then
+            [[ "$REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Expected a vX.Y.Z release tag'; exit 1; }
+            git merge-base --is-ancestor "$COMMIT" origin/main
+          fi
+          echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$COMMIT")" >> "$GITHUB_ENV"
+      - name: Set exact Node version for tool installer
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Install exact Buildx and Trivy binaries
+        run: bash scripts/ci/install-tools.sh buildx trivy
+      - name: Start digest-pinned BuildKit
+        run: |
+          mkdir -p .ci/artifacts
+          builder=$(node --input-type=module -e "import fs from 'node:fs';console.log(JSON.parse(fs.readFileSync('scripts/ci/images.lock.json')).buildkit)")
+          docker buildx create --name stanelabs-ci --driver docker-container --driver-opt "image=$builder" --use
+          docker buildx inspect --bootstrap
+      - name: Build OCI archive without publication credentials
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          tags: stanelabs:ci
+          outputs: type=oci,dest=.ci/artifacts/image.oci.tar
+          provenance: mode=max
+          sbom: false
+          github-token: ''
+          build-args: SOURCE_DATE_EPOCH=${{ env.SOURCE_DATE_EPOCH }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Extract the web archive from the same image and record inputs
+        env:
+          EXPECTED_IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: python3 scripts/ci/prepare-artifacts.py
+      - name: Scan the actual runtime image; fail on HIGH or CRITICAL
+        env:
+          EXPECTED_IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          trivy image --cache-dir .ci/trivy --input ".ci/image@$EXPECTED_IMAGE_DIGEST" \
+            --scanners vuln,misconfig,secret --image-config-scanners misconfig,secret --skip-check-update \
+            --severity HIGH,CRITICAL --exit-code 1 --format json --output .ci/artifacts/trivy-image.json
+      - name: Generate SBOMs for the runtime image and exported static assets
+        env:
+          EXPECTED_IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          trivy image --cache-dir .ci/trivy --input ".ci/image@$EXPECTED_IMAGE_DIGEST" --format spdx-json --output .ci/artifacts/image.sbom.spdx.json
+          trivy fs --cache-dir .ci/trivy --format spdx-json --output .ci/artifacts/web.sbom.spdx.json .ci/site
+          trivy fs --cache-dir .ci/trivy --include-dev-deps --skip-dirs node_modules --skip-dirs backend/node_modules \
+            --skip-dirs .next --skip-dirs .ci --skip-dirs dist --skip-dirs backend/dist \
+            --format spdx-json --output .ci/artifacts/source-dependencies.sbom.spdx.json .
+          node scripts/ci/record-scan.mjs
+          node scripts/ci/checksums.mjs
+      - name: Retain the exact scanned artifact
+        id: upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verified-image-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .ci/artifacts/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  publish:
+    name: Publish the scanned digest and sign provenance/SBOM
+    needs: [quality, security, image]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: ghcr
+    permissions:
+      contents: read
+      packages: write # Transfer the checked OCI image and its attestations to private GHCR.
+      attestations: write # Store signed provenance and SBOM claims in this repository.
+      id-token: write # Obtain short-lived GitHub OIDC identity for attestation signing.
+    steps:
+      - name: Checkout reviewed publication scripts without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set exact Node version for tool installer
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Install checksum-verified registry and verification tools
+        run: bash scripts/ci/install-tools.sh regctl gh
+      - name: Download only the artifact ID from this workflow run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.image.outputs.artifact-id }}
+          path: .ci/artifacts
+          merge-multiple: true
+      - name: Verify archive checksums and source identity before registry access
+        env:
+          EXPECTED_IMAGE_DIGEST: ${{ needs.image.outputs.digest }}
+        run: |
+          (cd .ci/artifacts && sha256sum --check SHA256SUMS && sha512sum --check SHA512SUMS)
+          python3 scripts/ci/prepare-artifacts.py --verify-only
+          node --input-type=module -e "import fs from 'node:fs';const info=JSON.parse(fs.readFileSync('.ci/artifacts/build-info.json'));if(info.sourceCommit!==process.env.GITHUB_SHA||info.sourceRef!==process.env.GITHUB_REF)throw new Error('Source identity mismatch')"
+      - name: Log in to private GHCR with this job's scoped token
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Promote the OCI bytes and enforce the remote digest
+        id: publication
+        env:
+          REPOSITORY: ${{ github.repository }}
+          COMMIT: ${{ github.sha }}
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          EXPECTED_DIGEST: ${{ needs.image.outputs.digest }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          image="ghcr.io/${REPOSITORY,,}"
+          candidate="candidate-$RUN_ID-$RUN_ATTEMPT"
+          regctl image copy "ocidir://.ci/image@$EXPECTED_DIGEST" "$image:$candidate" --force-recursive
+          actual=$(regctl image digest "$image:$candidate")
+          [[ "$actual" == "$EXPECTED_DIGEST" ]] || { echo 'Registry changed the scanned OCI digest'; exit 1; }
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+      - name: Sign image provenance with GitHub's repository-appropriate Sigstore instance
+        id: image-provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.publication.outputs.image }}
+          subject-digest: ${{ needs.image.outputs.digest }}
+          push-to-registry: true
+      - name: Sign the runtime SBOM for this image digest
+        id: image-sbom
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.publication.outputs.image }}
+          subject-digest: ${{ needs.image.outputs.digest }}
+          sbom-path: .ci/artifacts/image.sbom.spdx.json
+          push-to-registry: true
+      - name: Sign provenance for the extracted web archive and release metadata
+        id: files-provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            .ci/artifacts/stanelabs-web.tar
+            .ci/artifacts/SHA256SUMS
+            .ci/artifacts/SHA512SUMS
+            .ci/artifacts/build-info.json
+            .ci/artifacts/source-dependencies.sbom.spdx.json
+      - name: Sign the static asset SBOM for the extracted web archive
+        id: web-sbom
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: .ci/artifacts/stanelabs-web.tar
+          sbom-path: .ci/artifacts/web.sbom.spdx.json
+      - name: Enforce signatures, repository, workflow, source ref and commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ steps.publication.outputs.image }}
+          DIGEST: ${{ needs.image.outputs.digest }}
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_REF: ${{ github.ref }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          policy=(--repo "$SOURCE_REPO" --signer-workflow "$SOURCE_REPO/.github/workflows/ci.yml" --source-ref "$SOURCE_REF" --source-digest "$SOURCE_COMMIT" --deny-self-hosted-runners)
+          case "$REPOSITORY_PRIVATE" in
+            true) policy+=(--no-public-good) ;;
+            false) ;;
+            *) echo 'Missing trusted repository visibility'; exit 1 ;;
+          esac
+          mkdir -p .ci/attestations
+          gh attestation verify "oci://$IMAGE@$DIGEST" "${policy[@]}" --format json > .ci/attestations/image.provenance.verified.json
+          gh attestation verify "oci://$IMAGE@$DIGEST" "${policy[@]}" --predicate-type https://spdx.dev/Document/v2.3 --format json > .ci/attestations/image.sbom.verified.json
+          gh attestation verify .ci/artifacts/stanelabs-web.tar "${policy[@]}" --format json > .ci/attestations/web.provenance.verified.json
+          gh attestation verify .ci/artifacts/stanelabs-web.tar "${policy[@]}" --predicate-type https://spdx.dev/Document/v2.3 --format json > .ci/attestations/web.sbom.verified.json
+          for artifact in SHA256SUMS SHA512SUMS build-info.json source-dependencies.sbom.spdx.json; do
+            gh attestation verify ".ci/artifacts/$artifact" "${policy[@]}" --format json > ".ci/attestations/$artifact.provenance.verified.json"
+          done
+      - name: Promote verified aliases without overwriting a different release digest
+        env:
+          IMAGE: ${{ steps.publication.outputs.image }}
+          DIGEST: ${{ needs.image.outputs.digest }}
+          COMMIT: ${{ github.sha }}
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "$REF" == refs/tags/* ]]; then
+            # Listing must succeed; a network/auth failure never means 'tag absent'.
+            tags=$(regctl tag ls "$IMAGE")
+            if [[ $'\n'"$tags"$'\n' == *$'\n'"$REF_NAME"$'\n'* ]]; then
+              [[ "$(regctl image digest "$IMAGE:$REF_NAME")" == "$DIGEST" ]] || { echo 'Release tag already identifies a different digest'; exit 1; }
+            fi
+            tag="$REF_NAME"
+          else
+            tag=main
+          fi
+          regctl image copy "$IMAGE@$DIGEST" "$IMAGE:sha-$COMMIT"
+          regctl image copy "$IMAGE@$DIGEST" "$IMAGE:$tag"
+          [[ "$(regctl image digest "$IMAGE:sha-$COMMIT")" == "$DIGEST" ]]
+          [[ "$(regctl image digest "$IMAGE:$tag")" == "$DIGEST" ]]
+      - name: Retain signed bundles for later verification
+        env:
+          IMAGE_PROVENANCE_BUNDLE: ${{ steps.image-provenance.outputs.bundle-path }}
+          IMAGE_SBOM_BUNDLE: ${{ steps.image-sbom.outputs.bundle-path }}
+          FILES_PROVENANCE_BUNDLE: ${{ steps.files-provenance.outputs.bundle-path }}
+          WEB_SBOM_BUNDLE: ${{ steps.web-sbom.outputs.bundle-path }}
+        run: |
+          cp "$IMAGE_PROVENANCE_BUNDLE" .ci/attestations/image.provenance.sigstore.json
+          cp "$IMAGE_SBOM_BUNDLE" .ci/attestations/image.sbom.sigstore.json
+          cp "$FILES_PROVENANCE_BUNDLE" .ci/attestations/files.provenance.sigstore.json
+          cp "$WEB_SBOM_BUNDLE" .ci/attestations/web.sbom.sigstore.json
+      - name: Upload verification evidence and signed bundles
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: attestations-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .ci/attestations/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Show the verified digest and signed release artifacts
+        env:
+          IMAGE: ${{ steps.publication.outputs.image }}
+          DIGEST: ${{ needs.image.outputs.digest }}
+          COMMIT: ${{ github.sha }}
+          SOURCE_REF: ${{ github.ref }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          {
+            printf '%s\n\n' '## Verified StaneLabs publication'
+            printf '**Image:** `%s@%s`\n\n' "$IMAGE" "$DIGEST"
+            printf '**Commit:** `%s` — **Ref:** `%s` — **Platform:** `linux/amd64`\n\n' "$COMMIT" "$SOURCE_REF"
+            printf '**Artifacts:** `verified-image-%s-%s`, `attestations-%s-%s`\n\n' "$RUN_ID" "$RUN_ATTEMPT" "$RUN_ID" "$RUN_ATTEMPT"
+            printf '%s\n' 'Verified signed claims: image provenance + runtime SBOM; stanelabs-web.tar provenance + static asset SBOM; SHA256SUMS, SHA512SUMS, build-info.json and source-dependencies.sbom.spdx.json provenance.'
+          } >> "$GITHUB_STEP_SUMMARY"

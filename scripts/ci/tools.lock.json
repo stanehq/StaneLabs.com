@@ -1,0 +1,96 @@
+{
+    "schemaVersion":  1,
+    "platform":  "linux-amd64",
+    "verifiedAt":  "2026-10-10",
+    "tools":  [
+                  {
+                      "name":  "actionlint",
+                      "version":  "1.7.12",
+                      "repository":  "rhysd/actionlint",
+                      "tag":  "v1.7.12",
+                      "url":  "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz",
+                      "sha256":  "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
+                      "format":  "tar.gz",
+                      "binaryPath":  "actionlint",
+                      "source":  "https://github.com/rhysd/actionlint/releases/tag/v1.7.12",
+                      "digestSource":  "https://api.github.com/repos/rhysd/actionlint/releases/tags/v1.7.12",
+                      "checksumSource":  "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_checksums.txt"
+                  },
+                  {
+                      "name":  "zizmor",
+                      "version":  "1.30.1",
+                      "repository":  "zizmorcore/zizmor",
+                      "tag":  "v1.30.1",
+                      "url":  "https://github.com/zizmorcore/zizmor/releases/download/v1.30.1/zizmor-x86_64-unknown-linux-gnu.tar.gz",
+                      "sha256":  "e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a",
+                      "format":  "tar.gz",
+                      "binaryPath":  "zizmor",
+                      "source":  "https://github.com/zizmorcore/zizmor/releases/tag/v1.30.1",
+                      "digestSource":  "https://api.github.com/repos/zizmorcore/zizmor/releases/tags/v1.30.1"
+                  },
+                  {
+                      "name":  "gitleaks",
+                      "version":  "8.30.1",
+                      "repository":  "gitleaks/gitleaks",
+                      "tag":  "v8.30.1",
+                      "url":  "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz",
+                      "sha256":  "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+                      "format":  "tar.gz",
+                      "binaryPath":  "gitleaks",
+                      "source":  "https://github.com/gitleaks/gitleaks/releases/tag/v8.30.1",
+                      "digestSource":  "https://api.github.com/repos/gitleaks/gitleaks/releases/tags/v8.30.1",
+                      "checksumSource":  "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_checksums.txt"
+                  },
+                  {
+                      "name":  "trivy",
+                      "version":  "0.75.0",
+                      "repository":  "aquasecurity/trivy",
+                      "tag":  "v0.75.0",
+                      "url":  "https://github.com/aquasecurity/trivy/releases/download/v0.75.0/trivy_0.75.0_Linux-64bit.tar.gz",
+                      "sha256":  "c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f",
+                      "format":  "tar.gz",
+                      "binaryPath":  "trivy",
+                      "source":  "https://github.com/aquasecurity/trivy/releases/tag/v0.75.0",
+                      "digestSource":  "https://api.github.com/repos/aquasecurity/trivy/releases/tags/v0.75.0",
+                      "checksumSource":  "https://github.com/aquasecurity/trivy/releases/download/v0.75.0/trivy_0.75.0_checksums.txt"
+                  },
+                  {
+                      "name":  "gh",
+                      "version":  "2.102.0",
+                      "repository":  "cli/cli",
+                      "tag":  "v2.102.0",
+                      "url":  "https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_linux_amd64.tar.gz",
+                      "sha256":  "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386",
+                      "format":  "tar.gz",
+                      "binaryPath":  "gh_2.102.0_linux_amd64/bin/gh",
+                      "source":  "https://github.com/cli/cli/releases/tag/v2.102.0",
+                      "digestSource":  "https://api.github.com/repos/cli/cli/releases/tags/v2.102.0",
+                      "checksumSource":  "https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_checksums.txt"
+                  },
+                  {
+                      "name":  "regctl",
+                      "version":  "0.11.6",
+                      "repository":  "regclient/regclient",
+                      "tag":  "v0.11.6",
+                      "url":  "https://github.com/regclient/regclient/releases/download/v0.11.6/regctl-linux-amd64",
+                      "sha256":  "8e0e62a497fcdb8048d18aa927a139613176ba0531f412bc541044e28f9856bd",
+                      "format":  "binary",
+                      "binaryPath":  "",
+                      "source":  "https://github.com/regclient/regclient/releases/tag/v0.11.6",
+                      "digestSource":  "https://api.github.com/repos/regclient/regclient/releases/tags/v0.11.6"
+                  },
+                  {
+                      "name":  "buildx",
+                      "version":  "0.38.0",
+                      "repository":  "docker/buildx",
+                      "tag":  "v0.38.0",
+                      "url":  "https://github.com/docker/buildx/releases/download/v0.38.0/buildx-v0.38.0.linux-amd64",
+                      "sha256":  "4fe4cc38adf48169132749b6ca22a990928db0118e3407584ee553723115d287",
+                      "format":  "binary",
+                      "binaryPath":  "",
+                      "source":  "https://github.com/docker/buildx/releases/tag/v0.38.0",
+                      "digestSource":  "https://api.github.com/repos/docker/buildx/releases/tags/v0.38.0",
+                      "checksumSource":  "https://github.com/docker/buildx/releases/download/v0.38.0/checksums.txt"
+                  }
+              ]
+}

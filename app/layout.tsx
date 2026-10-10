@@ -13,8 +13,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return <html lang="es"><head>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@400;500;600&display=swap" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&display=swap" />
+    <link rel="stylesheet" href={'https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@400;500;600&display=swap'} />
+    <link rel="stylesheet" href={'https://fonts.googleapis.com/css2?family=Geist:wght@400;500&display=swap'} />
     <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg" />
     <link rel="apple-touch-icon" href="/brand/icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
