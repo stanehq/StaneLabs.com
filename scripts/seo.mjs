@@ -9,7 +9,7 @@ if (productionUrl.protocol !== 'https:' || productionUrl.username || productionU
   throw new Error('project-config.json: siteUrl must be a clean HTTPS origin.');
 }
 const origin = productionUrl.origin;
-const name = config.name || 'StaneLabs';
+const name = config.name || 'Stane';
 const privateBuild = config.sitePrivate !== false;
 const output = path.join(root, process.argv.includes('--dist') ? 'dist' : 'public');
 const distBuild = process.argv.includes('--dist');
@@ -21,10 +21,11 @@ const exists = async (filename) => access(filename).then(() => true, () => false
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const escapeXml = escapeHtml;
 const definitions = {
-  '/': { title: `${name} — Ciberseguridad, OPSEC y protección de datos`, description: 'Protege lo que importa. StaneLabs diseña estrategias de ciberseguridad, seguridad operacional y protección de información sensible.' },
-  '/security': { title: `Divulgación de vulnerabilidades — ${name}`, description: 'Canal de seguridad, alcance y recomendaciones para comunicar de forma responsable una vulnerabilidad a StaneLabs.' },
-  '/privacy': { title: `Privacidad — ${name}`, description: 'Información sobre el tratamiento de datos, los servicios de terceros y el ejercicio de tus derechos en StaneLabs.' },
-  '/legal': { title: `Información legal — ${name}`, description: 'Información sobre el sitio web de StaneLabs, condiciones de uso y datos del responsable pendientes de completar.' },
+  '/': { title: `${name} — Ciberseguridad, OPSEC y protección de datos`, description: 'Protege lo que importa. Stane diseña estrategias de ciberseguridad, seguridad operacional y protección de información sensible.' },
+  '/security': { title: `Divulgación de vulnerabilidades — ${name}`, description: 'Canal de seguridad, alcance y recomendaciones para comunicar de forma responsable una vulnerabilidad a Stane.' },
+  '/privacy': { title: `Privacidad — ${name}`, description: 'Información sobre el tratamiento de datos, los servicios de terceros y el ejercicio de tus derechos en Stane.' },
+  '/tos': { title: `Términos de servicio — ${name}`, description: '' },
+  '/purchase': { title: `Compras — ${name}`, description: '' },
 };
 
 function metadata(route, hasSocialImage) {
@@ -99,5 +100,5 @@ await writeFile(path.join(output, 'robots.txt'), `User-agent: *\nAllow: /\n\nSit
 await writeFile(path.join(output, 'sitemap.xml'), sitemap, 'utf8');
 await writeFile(path.join(output, '.well-known', 'security.txt'), securityTxt, 'utf8');
 // The root copy is a convenient compatibility path; /.well-known/security.txt is canonical.
-await writeFile(path.join(output, 'security.txt'), securityTxt, 'utf8');
+await (async () => { if (await exists(path.join(output, 'security.txt'))) await (await import('node:fs/promises')).unlink(path.join(output, 'security.txt')); })();
 console.log(`SEO prepared for ${origin}: ${routes.length} HTML page(s), manifest, robots, sitemap and security.txt (${privateBuild ? 'private / noindex' : 'public / index'}).`);
