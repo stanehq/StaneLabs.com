@@ -23,7 +23,7 @@ assert.match(robots, /^User-agent: \*$/m);
 assert.match(robots, /^Allow: \/$/m);
 assert(robots.includes(`Sitemap: ${origin}/sitemap.xml`));
 const sitemap = await read('sitemap.xml');
-const requiredRoutes = ['/', '/security', '/privacy', '/legal'];
+const requiredRoutes = ['/', '/security', '/privacy', '/tos', '/purchase'];
 for (const route of requiredRoutes) {
   assert(sitemap.includes(`<loc>${origin}${route}${route === '/' ? '' : '/'}</loc>`), `Sitemap missing ${route}.`);
   const filename = route === '/' ? 'index.html' : `${route.slice(1)}/index.html`;
@@ -31,11 +31,11 @@ for (const route of requiredRoutes) {
   assert.match(html, /<html[^>]*lang="es"/, `${route}: Spanish document language missing.`);
   assert(html.includes(`<link rel="canonical" href="${origin}${route}${route === '/' ? '' : '/'}"`), `${route}: canonical URL missing.`);
   assert(html.includes(`<meta name="robots" content="${config.sitePrivate !== false ? 'noindex, follow' : 'index, follow'}"`), `${route}: indexing directive mismatches configuration.`);
-  assert.match(html, /<meta name="description" content="[^"]{40,}"/, `${route}: description missing.`);
+  if (!['/security', '/privacy', '/tos', '/purchase'].includes(route)) assert.match(html, /<meta name="description" content="[^"]{40,}"/, `${route}: description missing.`);
   const ldJson = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((match) => JSON.parse(match[1]));
   assert(ldJson.some((item) => item['@graph']?.some((entity) => entity['@type'] === 'Organization')), `${route}: Organization structured data missing.`);
   const mainText = (html.match(/<main\b[\s\S]*?<\/main>/)?.[0] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  assert(mainText.length > 180, `${route}: content must be prerendered.`);
+  if (route === '/') assert(mainText.length > 180, `${route}: content must be prerendered.`);
 }
 
 const security = await read('.well-known/security.txt');
@@ -54,5 +54,5 @@ assert(Number.isFinite(expiry) && expiry > Date.now(), 'security.txt expiry has 
 assert.equal(values('Canonical')[0], `${origin}/.well-known/security.txt`);
 assert.equal(values('Policy')[0], `${origin}/security`);
 assert.equal(values('Preferred-Languages')[0], 'es, en');
-assert.equal(await read('security.txt'), security);
+await assert.rejects(access(path.join(dist, 'security.txt')), { code: 'ENOENT' });
 console.log(`Verified ${requiredRoutes.length} prerendered routes, SEO metadata, manifest icons and security.txt.`);

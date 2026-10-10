@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "StaneLabs",
-  "short_name": "StaneLabs",
-  "description": "Protege lo que importa. StaneLabs diseña estrategias de ciberseguridad, seguridad operacional y protección de información sensible.",
+  "name": "Stane",
+  "short_name": "Stane",
+  "description": "Protege lo que importa. Stane diseña estrategias de ciberseguridad, seguridad operacional y protección de información sensible.",
   "lang": "es",
   "start_url": "/",
   "scope": "/",
