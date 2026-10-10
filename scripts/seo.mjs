@@ -99,6 +99,6 @@ await writeFile(path.join(output, 'manifest.webmanifest'), `${JSON.stringify(man
 await writeFile(path.join(output, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${origin}/sitemap.xml\n`, 'utf8');
 await writeFile(path.join(output, 'sitemap.xml'), sitemap, 'utf8');
 await writeFile(path.join(output, '.well-known', 'security.txt'), securityTxt, 'utf8');
-// The root copy is a convenient compatibility path; /.well-known/security.txt is canonical.
+// Keep only /.well-known/security.txt as the canonical security disclosure file.
 await (async () => { if (await exists(path.join(output, 'security.txt'))) await (await import('node:fs/promises')).unlink(path.join(output, 'security.txt')); })();
 console.log(`SEO prepared for ${origin}: ${routes.length} HTML page(s), manifest, robots, sitemap and security.txt (${privateBuild ? 'private / noindex' : 'public / index'}).`);
