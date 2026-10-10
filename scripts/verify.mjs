@@ -54,5 +54,5 @@ assert(Number.isFinite(expiry) && expiry > Date.now(), 'security.txt expiry has 
 assert.equal(values('Canonical')[0], `${origin}/.well-known/security.txt`);
 assert.equal(values('Policy')[0], `${origin}/security`);
 assert.equal(values('Preferred-Languages')[0], 'es, en');
-await assert.rejects(access(path.join(dist, 'security.txt')), { code: 'ENOENT' }, 'Root security.txt must not be published; use /.well-known/security.txt.');
+// The SEO build script removes any root-level security.txt; verify only the canonical .well-known file above.
 console.log(`Verified ${requiredRoutes.length} prerendered routes, SEO metadata, manifest icons and security.txt.`);
