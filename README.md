@@ -12,14 +12,14 @@ La producción utiliza HTML, CSS y JavaScript estáticos de Next y el backend Ne
 
 ## Desarrollo y compilación
 
-Usar Node.js 22 o posterior; el Dockerfile utiliza Node.js 24. Desde la raíz:
+Usar **Node.js 24.21.0** y **npm 11.19.0**, fijados en `.node-version` y `package.json`. Docker fija también el digest de esa versión. Desde la raíz:
 
 ```sh
-npm ci
+npm ci --ignore-scripts
 npm run dev
 ```
 
-`npm ci` instala también el workspace `backend`. Next inicia en `http://127.0.0.1:3000`. Para revisar el mismo diseño mediante Vite:
+`npm ci --ignore-scripts` instala también el workspace `backend`, respeta el lock y evita hooks de dependencias. Next inicia en `http://127.0.0.1:3000`. Para revisar el mismo diseño mediante Vite:
 
 ```sh
 npm run dev:visual
@@ -50,7 +50,7 @@ Compila el frontend con Next, prepara su exportación en `dist/`, genera y verif
 
 ## Contacto y configuración SMTP
 
-La revisión estática de Sites funciona con un enlace `mailto:`: el formulario prepara un borrador en la aplicación de correo del visitante. No afirma que ese borrador haya sido enviado.
+La revisión estática sin API funciona con un enlace `mailto:`: el formulario prepara un borrador en la aplicación de correo del visitante. No afirma que ese borrador haya sido enviado.
 
 En Docker, `CONTACT_API_URL=/api` es el argumento público de compilación predeterminado y se convierte en `NEXT_PUBLIC_CONTACT_API_URL`. El frontend consulta `/api/contact/status`; cuando el backend dispone de toda la configuración SMTP, ofrece el envío directo a través de `/api/contact`. Si la API no está disponible o falta esa configuración, mantiene el borrador por correo. `/api/health` permite comprobar que el servicio responde.
 
@@ -66,7 +66,7 @@ El Dockerfile de la raíz contiene tres etapas:
 
 1. `build`: instala las dependencias y compila el frontend estático y la API.
 2. `runtime-dependencies`: instala únicamente las dependencias de producción del workspace `backend`.
-3. `runtime`: incorpora las dependencias anteriores, `backend/dist/` y el frontend compilado. Ejecuta el servicio como usuario `node` en el puerto 3001.
+3. `runtime`: incorpora las dependencias anteriores, `backend/dist/` y el frontend compilado; elimina npm/npx/Yarn. Ejecuta el servicio como usuario `node` en el puerto 3001.
 
 Con Docker instalado y `.env` preparado:
 
@@ -97,6 +97,21 @@ docker run -d --name stanelabs --restart unless-stopped --env-file .env -p 127.0
 ```
 
 También se puede usar una configuración Compose de despliegue que declare `image: stanelabs:1.0.0` en lugar de `build`. El VPS necesita Docker, la imagen, su configuración de entorno y el proxy inverso si se utiliza; no necesita el código fuente, Next, TypeScript ni ejecutar `npm install`. La imagen transferida debe haberse construido para su plataforma.
+
+## CI, GHCR y firmas
+
+El workflow de `.github/workflows/ci.yml` valida PRs, `main` y etiquetas `vX.Y.Z`. Construye una sola imagen `linux/amd64`, bloquea vulnerabilidades HIGH/CRITICAL y publica en GHCR privado únicamente tras los checks. La transferencia usa el archivo OCI escaneado y exige conservar su digest. Las firmas nativas de GitHub vinculan imagen, SBOM y archivos de distribución con el repo, workflow y commit; los aliases de lanzamiento se promueven después de verificar las firmas. El repositorio existente `stanehq/stanelabs.com` es público: sus informes y artefactos de Actions siguen esa visibilidad y sus firmas usan Sigstore público. Mantener el paquete GHCR privado no vuelve privados esos artefactos ni los metadatos de firma.
+
+Configura el environment `ghcr`, protecciones de rama/tags y permisos del paquete antes del primer push de publicación. [La guía de CI](.github/CI.md) describe los pins, comprobaciones, informes, attestations y comandos de verificación. La copia local no configura esos permisos externos ni acredita una ejecución de GitHub.
+
+Para desplegar desde GHCR, autentica Docker con acceso de lectura al paquete privado, verifica su attestation siguiendo esa guía y usa el **digest verificado**:
+
+```sh
+docker pull ghcr.io/OWNER/REPO@sha256:DIGEST
+docker run -d --name stanelabs --restart unless-stopped --env-file .env -p 127.0.0.1:3001:3001 --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true --init ghcr.io/OWNER/REPO@sha256:DIGEST
+```
+
+El VPS recibe solo la imagen compilada y su configuración; no ejecuta compiladores ni necesita instalar dependencias. Los tests locales se ejecutan con `npm run ci:check`; las pruebas del archivo OCI usan Python y están documentadas en la guía.
 
 ## SEO y publicación
 

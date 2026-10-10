@@ -1,0 +1,6 @@
+title = "StaneLabs secret scanning"
+
+# Preserve every upstream detector bundled into the pinned Gitleaks binary.
+# Add only finding-specific, reviewed exceptions if a false positive is proven.
+[extend]
+useDefault = true

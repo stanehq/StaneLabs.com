@@ -12,3 +12,6 @@ backend/dist
 !.env.example
 *.log
 *.tsbuildinfo
+.ci
+reports
+__pycache__

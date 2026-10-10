@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "workspaces": ["backend"],
+  "workspaces": [
+    "backend"
+  ],
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
     "dev:visual": "vite --host 127.0.0.1",
@@ -11,30 +13,44 @@
     "build": "node scripts/seo.mjs && next build --webpack && node scripts/finalize-next.mjs && node scripts/seo.mjs --dist && node scripts/verify.mjs && npm run build --workspace backend",
     "build:visual": "vite build && tsx scripts/prerender.tsx",
     "preview": "vite preview --host 127.0.0.1",
-    "start": "node backend/dist/main.js"
+    "start": "node backend/dist/main.js",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "next typegen && tsc --noEmit --incremental false && tsc -p backend/tsconfig.json --noEmit --incremental false",
+    "test:ci": "npm run test --workspace backend",
+    "ci:check": "npm run lint && npm run typecheck && npm run test:ci",
+    "test:artifacts": "python3 -m unittest discover -s scripts/ci -p test_artifacts.py -v"
   },
   "dependencies": {
-    "@radix-ui/react-accordion": "^1.2.12",
-    "@radix-ui/react-dialog": "^1.1.15",
-    "@radix-ui/react-slot": "^1.2.3",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "feather-icons": "^4.29.2",
-    "next": "^16.0.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "tailwind-merge": "^3.3.1"
+    "@radix-ui/react-accordion": "1.2.21",
+    "@radix-ui/react-dialog": "1.2.0",
+    "@radix-ui/react-slot": "1.4.0",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "feather-icons": "4.29.2",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tailwind-merge": "3.7.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.1.14",
-    "@tailwindcss/postcss": "^4.1.14",
-    "@types/node": "^24.7.0",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "@vitejs/plugin-react": "^5.0.4",
-    "tailwindcss": "^4.1.14",
-    "tsx": "^4.20.6",
-    "typescript": "^5.9.3",
-    "vite": "^7.1.9"
-  }
+    "@eslint/js": "10.0.1",
+    "@tailwindcss/postcss": "4.3.3",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "eslint": "10.12.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.1",
+    "vite": "7.3.7"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "packageManager": "npm@11.19.0"
 }

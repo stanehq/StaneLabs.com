@@ -32,7 +32,7 @@ test('malformed JSON and oversized requests return bounded errors without loggin
   try {
     let ready = false;
     for (let attempt = 0; attempt < 150; attempt++) {
-      try { ready = (await fetch(`${origin}/api/health`)).ok; } catch {}
+      try { ready = (await fetch(`${origin}/api/health`)).ok; } catch { /* The server may still be starting. */ }
       if (ready) break;
       if (child.exitCode !== null) break;
       await new Promise(resolve => setTimeout(resolve, 100));

@@ -11,3 +11,7 @@ backend/dist/
 .env.*
 !.env.example
 !backend/.env.example
+.ci/
+reports/
+__pycache__/
+.openai/
